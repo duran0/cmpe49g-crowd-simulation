@@ -176,9 +176,9 @@ def simulate_perlin_crowd():
         )
         return bg, quiv, scat_active, scat_idle
 
-    anim = FuncAnimation(fig, update, frames=frames, interval=80, blit=False)
+    anim = FuncAnimation(fig, update, frames=frames, interval=100, blit=False)
     path = OUT / "perlin_crowd_simulation.gif"
-    anim.save(path, writer=PillowWriter(fps=12))
+    anim.save(path, writer=PillowWriter(fps=10))
     plt.close(fig)
     return path
 
@@ -352,9 +352,9 @@ def simulate_particle_filter():
         ax.set_title("StationSim-like particle filter data assimilation")
         return true_sc, est_sc, obs_sc, model_sc, spread_sc, text
 
-    anim = FuncAnimation(fig, update, frames=frames, interval=80, blit=False)
+    anim = FuncAnimation(fig, update, frames=frames, interval=100, blit=False)
     gif_path = OUT / "particle_filter_station_sim.gif"
-    anim.save(gif_path, writer=PillowWriter(fps=12))
+    anim.save(gif_path, writer=PillowWriter(fps=10))
     plt.close(fig)
 
     # RMSE summary chart
@@ -549,9 +549,9 @@ def simulate_hybrid_adaptive():
         )
         return quiv, bg_sc, tr_sc, risk_sc, text, danger_patch
 
-    anim = FuncAnimation(fig, update, frames=frames, interval=80, blit=False)
+    anim = FuncAnimation(fig, update, frames=frames, interval=100, blit=False)
     gif_path = OUT / "hybrid_adaptive_prototype.gif"
-    anim.save(gif_path, writer=PillowWriter(fps=12))
+    anim.save(gif_path, writer=PillowWriter(fps=10))
     plt.close(fig)
     return gif_path
 
