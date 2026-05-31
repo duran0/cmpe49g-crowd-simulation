@@ -1,20 +1,22 @@
----
+﻿---
 title: "Hybrid Adaptive Crowd Simulation Using Noise-Based Coordination and Local Data Assimilation"
 author:
-  - "Duran Kaan Altın - 2020400108"
+  - "Duran Kaan Altin - 2020400108"
   - "Enes Sait Besler - 2020400159"
-subtitle: "CMPE 49G - Fundamentals of Particle-based Simulations, Boğaziçi University"
+subtitle: "CMPE 49G - Fundamentals of Particle-based Simulations, Bogazici University"
 date: "May 31, 2026"
 geometry: margin=1in
 fontsize: 11pt
 linestretch: 1.08
+header-includes:
+  - \usepackage{float}
 ---
 
 # Abstract
 
 Crowd simulation has a practical tension at its center. A model should be cheap enough to run many agents, but it should still respond when a local part of the crowd changes because of congestion, sensor observations, or risk. This paper studies two approaches that address different sides of this problem. The first uses Perlin noise as a coordination signal for large groups of non-player agents. Smooth noise fields can control movement parameters, action timing, and spatial events without requiring every agent to communicate with nearby agents. The second uses particle filtering for real-time crowd simulation, where an agent-based model is corrected with noisy observations. The noise-based method is scalable and reproducible, but it is not naturally tied to live observations. The particle filter is better suited for state estimation, but it becomes expensive as the crowd state grows.
 
-Based on this comparison, we propose a hybrid adaptive crowd simulation framework. Most background agents are controlled by Perlin-like fields. Agents near sensors, exits, congestion, or danger zones are handled by a local correction layer based on particle filtering or a similar estimator. The local estimate then feeds back into the surrounding field, so the global controller is no longer completely static. This paper presents the motivation, background, proposed architecture, methodology, experimental results, and analysis. Our experiments demonstrate that the hybrid approach achieves 5.3× better evacuation outcomes compared to pure Perlin-based simulation, while maintaining 86% of baseline computational performance. The proposed framework successfully balances computational efficiency with adaptive accuracy, making it suitable for large-scale real-time crowd simulations requiring responsive behavior in critical zones.
+Based on this comparison, we propose a hybrid adaptive crowd simulation framework. Most background agents are controlled by Perlin-like fields. Agents near sensors, exits, congestion, or danger zones are handled by a local correction layer based on particle filtering or a similar estimator. The local estimate then feeds back into the surrounding field, so the global controller is no longer completely static. This paper presents the motivation, background, proposed architecture, methodology, experimental results, and analysis. At 500 agents, the hybrid approach achieves a 5.25x higher evacuation rate than pure Perlin (16.8% vs. 3.2%) while preserving about 89% of baseline throughput. This makes the framework suitable for large-scale real-time crowd simulations that require local responsiveness.
 
 **Keywords:** crowd simulation, Perlin noise, particle filter, data assimilation, agent-based simulation, evacuation, adaptive fields
 
@@ -57,6 +59,14 @@ The important part is how $v_i(t)$ is chosen. It can depend on the goal directio
 This topic fits the scope of particle-based simulation because the crowd is represented as a set of interacting entities. Crowd agents can be viewed as particles whose motion is affected by fields, local interaction rules, and stochastic decisions. This connects the project to simulation ideas such as random walks, vector fields, diffusion, cellular automata, and Monte Carlo methods.
 
 The probabilistic side is also central. Particle filtering relies on random variables, probability distributions, noisy measurements, and Bayesian updating. These concepts are directly related to the observation-based correction layer proposed later in the paper.
+
+## 2.3 Related Work and Literature Survey
+
+Existing crowd simulation literature relevant to this project can be grouped into two practical directions. The first direction emphasizes scalable procedural coordination. Xu and Verbrugge [1] show that Perlin-like fields can coordinate many agents with smooth local coherence and very low communication overhead between agents. This direction is attractive for large virtual crowds, but it is not primarily designed for observation-driven correction during runtime.
+
+The second direction emphasizes data assimilation and state estimation. Malleson et al. [2,3] formulate real-time crowd simulation as an agent-based filtering problem, where noisy observations are used to repeatedly correct model state. This direction improves tracking fidelity, but it introduces substantial computational cost as the number of agents and state dimensions increase.
+
+Positioning of our work: we target the gap between these directions by combining a scalable procedural background layer with selective local correction near critical zones. Unlike a pure procedural controller, the hybrid approach can adapt near sensors and exits; unlike a full-crowd particle filter, it avoids applying expensive correction everywhere.
 
 # 3. Perlin Noise as a Crowd Coordination Layer
 
@@ -345,7 +355,7 @@ This is useful in evacuation scenarios because congestion does not stay at a sin
 
 ## 6.1 Simulation Environment
 
-The experimental environment is a 2D rectangular evacuation domain with dimensions 1.0 × 1.0 (normalized units). Agents are initialized on the left side of the environment (x ∈ [0.02, 0.30]) with random vertical positions. Two exits are placed at coordinates (1.0, 0.25) and (1.0, 0.75). Agents move toward the nearest exit and are considered evacuated when they reach within 0.05 units of an exit.
+The experimental environment is a 2D rectangular evacuation domain with dimensions 1.0 x 1.0 (normalized units). Agents are initialized on the left side of the environment (x in [0.02, 0.30]) with random vertical positions. Two exits are placed at coordinates (1.0, 0.25) and (1.0, 0.75). Agents move toward the nearest exit and are considered evacuated when they reach within 0.05 units of an exit.
 
 For the hybrid model, three sensor zones are defined as circular regions with centers at (0.40, 0.35), (0.40, 0.65), and (0.70, 0.50), each with radius 0.15. Agents entering these zones or approaching exits (within 0.20 units) are promoted to the critical tracking layer.
 
@@ -357,7 +367,7 @@ Three models are implemented and compared:
 All agents follow Perlin-like noise fields combined with goal-directed motion. The movement direction is computed as a weighted combination of Perlin field orientation (weight 0.30) and goal direction toward nearest exit (weight 0.70). No particle filter correction is applied. This represents the baseline scalable approach.
 
 **Model 2: Particle Filter Model**  
-A full particle filter is applied to all agents. Due to computational constraints, this model is only tested with small crowds (50 agents, 100 particles). Each particle represents a possible state of the entire crowd. Observations are generated from pseudo-truth positions with Gaussian noise (σ = 0.15). The particle filter performs prediction, observation, weighting, and resampling steps every 2 simulation frames.
+A full particle filter is applied to all agents. Due to computational constraints, this model is only tested with small crowds (50 agents, 100 particles). Each particle represents a possible state of the entire crowd. Observations are generated from pseudo-truth positions with Gaussian noise (sigma = 0.15). The particle filter performs prediction, observation, weighting, and resampling steps every 2 simulation frames.
 
 **Model 3: Hybrid Adaptive Model**  
 Background agents follow Perlin fields (weight 0.35) with goal direction (weight 0.65). Critical agents near sensors or exits receive stronger goal bias (weight 0.15 Perlin, 0.85 goal) and speed boost, simulating the effect of local particle filter correction. This represents the proposed adaptive architecture.
@@ -396,73 +406,71 @@ All experiments are conducted on consistent hardware with timing measurements us
 
 ## 7.1 Scalability Analysis
 
-![Scalability Analysis: Runtime and FPS vs Agent Count](figures/fig1_scalability.png)
+![Computational performance comparison showing runtime and frames-per-second (FPS) as agent count increases from 100 to 500.](figures/fig1_scalability.png){latex-placement="H"}
 
-**Figure 1:** Computational performance comparison showing runtime and frames-per-second (FPS) as agent count increases from 100 to 500.
+Figure 1 shows the computational performance of Pure Perlin and Hybrid Adaptive models as agent count increases from 100 to 500. The Pure Perlin model maintains higher throughput across all scales, ranging from 1919 FPS at 100 agents to 1208 FPS at 500 agents. The Hybrid model shows slightly lower but comparable performance, ranging from 1750 FPS at 100 agents to 1073 FPS at 500 agents.
 
-Figure 1 shows the computational performance of Pure Perlin and Hybrid Adaptive models as agent count increases from 100 to 500. The Pure Perlin model maintains higher throughput across all scales, ranging from 2295 FPS at 100 agents to 1398 FPS at 500 agents. The Hybrid model shows slightly lower but comparable performance, ranging from 2109 FPS at 100 agents to 1198 FPS at 500 agents.
+The runtime difference between the two models remains relatively small and scales approximately linearly with agent count. At 500 agents, the Pure Perlin model completes 250 frames in 0.207 seconds, while the Hybrid model requires 0.233 seconds, an overhead of approximately 12.5%. This overhead is attributed to the additional computation required for critical zone detection, agent classification, and adaptive field updates.
 
-The runtime difference between the two models remains relatively small and scales approximately linearly with agent count. At 500 agents, the Pure Perlin model completes 250 frames in 0.179 seconds, while the Hybrid model requires 0.209 seconds—approximately 17% overhead. This overhead is attributed to the additional computation required for critical zone detection, agent classification, and adaptive field updates.
-
-The Hybrid model tracks an average of 33-35% of agents as critical across the tested scenarios. For 500 agents, approximately 170 agents are tracked at any given time, demonstrating that the correction layer operates on a manageable subset rather than the full crowd. More importantly, the Hybrid model achieves significantly higher evacuation rates (15-17% of agents evacuated within the simulation window) compared to the Pure Perlin model (2-3%), demonstrating the practical benefit of the adaptive correction layer.
+The Hybrid model tracks an average of 33.6-35.1% of agents as critical across the tested scenarios. For 500 agents, about 168 agents are tracked at any given time, demonstrating that the correction layer operates on a manageable subset rather than the full crowd. More importantly, the Hybrid model achieves significantly higher evacuation rates (16.8% of agents evacuated within the simulation window) compared to the Pure Perlin model (3.2%), demonstrating the practical benefit of the adaptive correction layer.
 
 ## 7.2 Particle Filter State Estimation
 
 The Particle Filter model with 50 agents and 100 particles achieves an average position RMSE of 0.240 units over 200 simulation frames. The filter maintains stable tracking with RMSE fluctuating between 0.20 and 0.28 units, demonstrating effective state estimation for small crowds.
 
-However, the computational cost is substantial. The particle filter runs at only 557 FPS for 50 agents, compared to 2295 FPS for the Pure Perlin model at 100 agents (twice as many agents). Extrapolating this scaling behavior suggests that applying a full particle filter to 300-500 agents would result in prohibitively low frame rates—likely under 100 FPS—which is inadequate for real-time interactive applications.
+![Particle filter state estimation error (RMSE) over time for the 50-agent scenario.](figures/fig5_pf_rmse.png){latex-placement="H"}
 
-This result validates the hybrid architecture's design choice: particle filtering provides accurate state estimation but is computationally expensive, making it suitable only for localized application to critical agents rather than full-crowd tracking. The Hybrid model's strategy of applying particle-filter-inspired correction to only 33-35% of agents achieves a practical balance between accuracy and computational feasibility.
+However, the computational cost is substantial. The particle filter runs at only 470 FPS for 50 agents, compared to 1919 FPS for the Pure Perlin model at 100 agents (twice as many agents). Applying a full particle filter to 300-500 agents leads to impractically low throughput, confirmed by the 500-agent experiment at about 30 FPS.
+
+This result validates the hybrid architecture's design choice: particle filtering provides accurate state estimation but is computationally expensive, making it suitable only for localized application to critical agents rather than full-crowd tracking. The Hybrid model's strategy of applying particle-filter-inspired correction to only about 34% of agents achieves a practical balance between accuracy and computational feasibility.
 
 ## 7.3 Evacuation Performance Comparison
 
-Table 1 presents summary statistics across 5 runs with 200 agents each. The Pure Perlin model achieves an average evacuation time of 8.46 ± 0.12 seconds and runtime of 0.13 ± 0.00 seconds. The Hybrid Adaptive model shows better evacuation performance with average evacuation time of 8.23 ± 0.14 seconds and slightly higher runtime of 0.14 ± 0.00 seconds.
+Table 1 presents summary statistics across 5 runs with 200 agents each. The Pure Perlin model achieves an average evacuation time of 8.50 +/- 0.16 seconds and runtime of 0.16 +/- 0.01 seconds. The Hybrid Adaptive model shows better evacuation performance with average evacuation time of 8.25 +/- 0.09 seconds and slightly higher runtime of 0.17 +/- 0.00 seconds.
 
-Maximum density measurements show comparable values between models. The Pure Perlin model reaches peak densities of 1061 ± 107 agents per unit area, while the Hybrid model achieves 1078 ± 101 agents per unit area. The similar density values suggest that both models handle spatial congestion comparably in the tested scenarios.
+Maximum density measurements are in the same order of magnitude for both models. The Pure Perlin model reaches peak densities of 1084 +/- 97 agents per unit area, while the Hybrid model reaches 1152 +/- 96 agents per unit area.
 
-The key difference lies in evacuation success rates. As shown in Figure 2, the Hybrid model achieves substantially higher evacuation rates (approximately 15-17% of agents) compared to the Pure Perlin model (2-3% of agents). This demonstrates that the adaptive correction layer near exits provides significant practical benefits by improving goal-directed behavior where it matters most—near evacuation points.
+The key difference lies in evacuation success rates. The Hybrid model achieves substantially higher evacuation rates (approximately 16.8% of agents at 500 agents) compared to the Pure Perlin model (3.2% of agents), indicating that the adaptive correction layer near exits improves goal-directed behavior where it matters most.
 
-![Evacuation Time Comparison](figures/fig2_evacuation_times.png)
+![Average and maximum evacuation times for Pure Perlin and Hybrid Adaptive models (200 agents, 5 runs, error bars show standard deviation).](figures/fig2_evacuation_times.png){latex-placement="H"}
 
-**Figure 2:** Average and maximum evacuation times for Pure Perlin and Hybrid Adaptive models (200 agents, 5 runs, error bars show standard deviation).
+![Table 1. Summary statistics for all models across 5 runs with 200 agents each. Values are shown as mean +/- standard deviation.](figures/fig3_summary_table.png){latex-placement="H"}
 
-![Summary Statistics Table](figures/fig3_summary_table.png)
-
-**Table 1:** Summary statistics for all models across 5 runs with 200 agents each. Values shown as mean ± standard deviation.
-
-Figure 2 visualizes the evacuation time comparison. While both models show similar average evacuation times for the agents that do evacuate, the Hybrid model's advantage becomes clear when considering the evacuation rate—significantly more agents successfully reach exits under the Hybrid approach. The primary benefit of the Hybrid approach lies in its ability to maintain computational scalability while improving evacuation outcomes through selective adaptive correction near critical zones.
+Figure 2 visualizes the evacuation time comparison. While both models show similar average evacuation times for the agents that do evacuate, the Hybrid model's advantage becomes clear when considering evacuation rate: significantly more agents successfully reach exits under the Hybrid approach. The main benefit of the Hybrid approach is that it maintains computational scalability while improving evacuation outcomes through selective adaptive correction near critical zones.
 
 ## 7.4 Critical Agent Tracking
 
-The Hybrid model with 300 total agents shows dynamic tracking behavior where the tracked count varies between 80 and 120 agents (27-40% of the population), with peaks occurring when multiple agents converge near sensor zones and exits.
+The Hybrid model with 300 total agents shows dynamic tracking behavior where the tracked count varies between 49 and 131 agents (16-44% of the population), with peaks occurring when multiple agents converge near sensor zones and exits.
 
-This dynamic tracking behavior demonstrates the adaptive nature of the hybrid architecture. Agents transition between background and critical states based on their spatial location, allowing computational resources to be concentrated where precision matters most. The relatively stable tracking ratio across different crowd sizes (33-35%) suggests that the critical zone design scales appropriately with agent count.
+![Number of agents promoted to the critical tracking layer over simulation frames (300-agent Hybrid scenario).](figures/fig4_tracked_agents.png){latex-placement="H"}
+
+This dynamic tracking behavior demonstrates the adaptive nature of the hybrid architecture. Agents transition between background and critical states based on their spatial location, allowing computational resources to be concentrated where precision matters most. The relatively stable tracking ratio across different crowd sizes (33.6-35.1%) suggests that the critical zone design scales appropriately with agent count.
 
 ## 7.5 Model Comparison Summary
 
 | Model | Agents | Runtime (s) | FPS | Evac Rate (%) | RMSE |
 |-------|--------|-------------|-----|---------------|------|
-| Pure Perlin | 500 | 0.181 | 1385 | 3.2 | — |
-| Hybrid | 500 | 0.206 | 1216 | 16.8 | — |
-| Particle Filter | 500 | 6.299 | **31.8** | 0.0 | 0.266 |
+| Pure Perlin | 500 | 0.207 | 1208 | 3.2 | N/A |
+| Hybrid | 500 | 0.233 | 1073 | 16.8 | N/A |
+| Particle Filter | 500 | 6.641 | **30.1** | 0.0 | 0.266 |
 
-The Pure Perlin model excels in computational efficiency but shows limited evacuation success (only 3.2% of agents evacuate within the simulation window). The Particle Filter provides accurate state estimation (RMSE ≈ 0.27 at 500 agents) but suffers catastrophic performance degradation at scale—running at only 31.8 FPS for 500 agents, which is **43× slower** than Pure Perlin and **38× slower** than Hybrid. This represents a 97.7% performance loss, making full particle filtering completely impractical for real-time applications. The Hybrid Adaptive model achieves the intended balance: it maintains near-Perlin computational performance (17% runtime overhead) while significantly improving evacuation outcomes through selective correction, achieving 5.3× higher evacuation rates than the Pure Perlin baseline.
+The Pure Perlin model excels in computational efficiency but shows limited evacuation success (only 3.2% of agents evacuate within the simulation window). The Particle Filter provides accurate state estimation (RMSE ~ 0.27 at 500 agents) but scales poorly, running at only 30.1 FPS for 500 agents, which is **40.1x slower** than Pure Perlin and **35.6x slower** than Hybrid. This corresponds to a 97.5% performance loss relative to Pure Perlin. The Hybrid Adaptive model achieves the intended trade-off: near-Perlin computational performance (12.5% runtime overhead) with significantly better evacuation outcomes (5.25x higher evacuation rate than the Pure Perlin baseline).
 
 # 8. Discussion
 
 ## 8.1 Interpretation of Results
 
-The experimental results validate the central hypothesis of this work: hybrid adaptive crowd simulation can achieve a practical balance between computational efficiency and local adaptability. The Hybrid model incurs approximately 17% computational overhead compared to Pure Perlin while tracking 33-35% of agents in critical zones. This overhead is substantially lower than the cost of applying particle filtering to the entire crowd, which would reduce frame rates by approximately 75% based on the small-scale particle filter results (557 FPS for 50 agents vs. 2295 FPS for 100 agents with Pure Perlin).
+The experimental results validate the central hypothesis of this work: hybrid adaptive crowd simulation can achieve a practical balance between computational efficiency and local adaptability. The Hybrid model incurs approximately 12.5% computational overhead compared to Pure Perlin while tracking 33.6-35.1% of agents in critical zones. This overhead is substantially lower than the cost of applying particle filtering to the entire crowd, which would reduce frame rates by approximately 75% based on the small-scale particle filter results (470 FPS for 50 agents vs. 1919 FPS for 100 agents with Pure Perlin).
 
-The most significant finding is the substantial improvement in evacuation outcomes. The Hybrid model achieves 5.3× higher evacuation rates (15-17% of agents evacuated) compared to the Pure Perlin baseline (2-3%), while maintaining similar average evacuation times for agents that do evacuate (8.23s vs. 8.46s). This demonstrates that the adaptive correction layer near exits provides meaningful practical benefits by strengthening goal-directed behavior precisely where it matters most—in the final approach to evacuation points.
+The most significant finding is the improvement in evacuation outcomes. The Hybrid model achieves 5.25x higher evacuation rates (16.8% of agents evacuated) compared to the Pure Perlin baseline (3.2%), while maintaining similar average evacuation times for agents that do evacuate (8.25s vs. 8.50s in the 200-agent statistical runs). This indicates that the adaptive correction layer near exits improves goal-directed behavior in the final approach to evacuation points.
 
-The similar density measurements between models (1078 ± 101 for Hybrid vs. 1061 ± 107 for Pure Perlin) indicate that both approaches handle spatial congestion comparably in open areas. The Hybrid model's advantage emerges specifically in critical zones near exits, where the correction layer's stronger goal bias enables more agents to successfully complete evacuation rather than being deflected by the Perlin field's stochastic variations.
+Density measurements in the statistical runs are slightly higher for Hybrid (1152 +/- 96) than Pure Perlin (1084 +/- 97), indicating that the evacuation-rate improvement is not simply caused by lower peak crowd density in this setup. The Hybrid model's advantage emerges specifically in critical zones near exits, where the correction layer's stronger goal bias enables more agents to successfully complete evacuation rather than being deflected by the Perlin field's stochastic variations.
 
 ## 8.2 Computational Trade-offs
 
-The scalability analysis demonstrates that the Hybrid architecture maintains practical real-time performance across a range of crowd sizes. At 500 agents, the Hybrid model achieves 1216 FPS compared to 1385 FPS for Pure Perlin—a 17% overhead that still far exceeds typical real-time requirements (30-60 FPS for interactive applications). This substantial performance headroom allows for additional model complexity, such as more sophisticated obstacle avoidance, social forces, or group behaviors, without sacrificing real-time constraints.
+The scalability analysis demonstrates that the Hybrid architecture maintains practical real-time performance across a range of crowd sizes. At 500 agents, the Hybrid model achieves 1073 FPS compared to 1208 FPS for Pure Perlin, a 12.5% overhead that still far exceeds typical real-time requirements (30-60 FPS for interactive applications). This performance headroom allows for additional model complexity, such as more sophisticated obstacle avoidance, social forces, or group behaviors, without sacrificing real-time constraints.
 
-The particle filter results provide stark empirical evidence for the necessity of selective application. At 500 agents with 500 particles, the full particle filter runs at only **31.8 FPS**—a 97.7% performance degradation compared to Pure Perlin. This represents a 43× slowdown compared to the baseline and a 38× slowdown compared to the Hybrid model. At this performance level, the simulation barely meets minimum real-time requirements and leaves zero computational headroom for additional features, realistic environments, or user interaction. The Hybrid model's strategy of applying intensive correction only to approximately 33-35% of agents is therefore not just beneficial but **essential** for maintaining both performance and adaptability at scale. Without selective application, particle filtering is simply not viable for large-scale real-time crowd simulation.
+The particle filter results show why selective application is necessary. At 500 agents with 500 particles, the full particle filter runs at only **30.1 FPS**, a 97.5% performance degradation compared to Pure Perlin. This represents a 40.1x slowdown compared to the baseline and a 35.6x slowdown compared to the Hybrid model. At this performance level, the simulation leaves almost no computational headroom for additional features, realistic environments, or user interaction. Applying intensive correction only to approximately 33.6-35.1% of agents is therefore essential for maintaining both performance and adaptability at scale.
 
 ## 8.3 Parameter Sensitivity
 
@@ -488,29 +496,35 @@ For evacuation planning and public safety, the Hybrid model provides a foundatio
 
 The reproducibility of the Perlin layer is also valuable for testing and validation. By fixing the random seed, researchers can isolate the effects of different correction strategies or parameter choices while holding the background motion constant.
 
+## 8.6 Comparison with Existing Literature
+
+Our results are consistent with the two main literature directions. Xu and Verbrugge [1] emphasize scalable field-based coordination, and we observe the same trend: the Pure Perlin baseline remains the fastest model (1208 FPS at 500 agents). Malleson et al. [2,3] emphasize observation-driven correction but note scaling difficulty, and we observe the same pattern: full particle filtering gives useful estimation quality on small scenarios (RMSE 0.240 at 50 agents) but drops to 30.1 FPS at 500 agents. The proposed Hybrid model combines these directions by keeping near-Perlin throughput (1073 FPS at 500 agents) while improving evacuation success (16.8% vs 3.2%, a 5.25x increase over Pure Perlin).
+
+This is a directional comparison rather than a strict external benchmark, because scenarios, hardware, and implementation details differ.
+
 # 9. Conclusion
 
 This paper presented a hybrid adaptive crowd simulation framework that combines Perlin-noise-based coordination for background agents with particle-filter-inspired correction for critical agents. The motivation was to address the tension between computational scalability and local adaptability in large-scale crowd simulations.
 
-We implemented and compared three models: a Pure Perlin baseline, a full Particle Filter for small crowds, and the proposed Hybrid Adaptive model. Experimental results demonstrate that the Hybrid approach maintains near-baseline computational performance (17% overhead) while significantly improving evacuation outcomes through selective correction of 33-35% of agents.
+We implemented and compared three models: a Pure Perlin baseline, a full Particle Filter for small crowds, and the proposed Hybrid Adaptive model. Experimental results demonstrate that the Hybrid approach maintains near-baseline computational performance (12.5% overhead) while significantly improving evacuation outcomes through selective correction of 33.6-35.1% of agents.
 
-The Pure Perlin model excels in raw efficiency, achieving 2267 FPS at 100 agents and 1385 FPS at 500 agents, but shows poor evacuation success with only 2-3% of agents reaching exits. The Particle Filter provides accurate state estimation (RMSE ≈ 0.27 at 500 agents) but suffers catastrophic performance degradation at scale, running at only 31.8 FPS for 500 agents—43× slower than Pure Perlin. The Hybrid model achieves the intended balance: maintaining high performance (1216 FPS at 500 agents) while delivering 5.3× higher evacuation rates (16.8%) compared to the Pure Perlin baseline.
+The Pure Perlin model excels in raw efficiency, achieving 1919 FPS at 100 agents and 1208 FPS at 500 agents, but shows poor evacuation success with only 1.8-3.2% of agents reaching exits. The Particle Filter provides accurate state estimation (RMSE ~ 0.27 at 500 agents) but scales poorly, running at only 30.1 FPS for 500 agents (40.1x slower than Pure Perlin). The Hybrid model achieves the intended balance: high performance (1073 FPS at 500 agents) with 5.25x higher evacuation rates (16.8%) compared to the Pure Perlin baseline.
 
 The key contributions of this work are:
 
 1. **Modular architecture** that separates background coordination from local correction, allowing computational resources to be concentrated in critical zones near exits and sensors.
 
-2. **Experimental validation** demonstrating that the hybrid approach achieves both computational scalability and measurably better evacuation outcomes—a 5.3× improvement in evacuation success with only 17% computational overhead.
+2. **Experimental validation** demonstrating that the hybrid approach achieves both computational scalability and measurably better evacuation outcomes, with a 5.25x improvement in evacuation success and only 12.5% computational overhead.
 
-3. **Scalability analysis** showing that selective application of intensive correction methods is essential: applying particle filtering to all agents would reduce performance by 75%, while the hybrid approach maintains 86% of baseline performance while adding adaptive capability.
+3. **Scalability analysis** showing that selective application of intensive correction methods is essential: applying particle filtering to all agents would reduce performance by about 97.5% at 500-agent scale, while the hybrid approach maintains about 89% of baseline performance while adding adaptive capability.
 
-The experimental results validate the core hypothesis: hybrid adaptive crowd simulation can balance efficiency with adaptability. The modest computational overhead (17%) is more than justified by the substantial improvement in evacuation performance, demonstrating practical value for applications where outcome quality matters alongside computational efficiency.
+The experimental results support the core hypothesis: hybrid adaptive crowd simulation can balance efficiency and adaptability. The computational overhead is modest (12.5%) relative to the evacuation-rate improvement.
 
 Future work could explore several directions. First, implementing a full particle filter for critical agents rather than an abstracted correction layer would enable more rigorous state estimation and uncertainty quantification. Second, incorporating dynamic events such as moving obstacles, hazards, or sudden crowd surges would better demonstrate real-time adaptive capabilities. Third, extending the feedback mechanism to include quantitative congestion estimates or multi-scale field updates would strengthen the coupling between local correction and global coordination.
 
 Alternative data assimilation methods, such as the Ensemble Kalman Filter or density-based estimators, could also be tested as replacements for the particle filter correction layer. These methods may offer better scalability or more natural integration with grid-based fields. Additionally, testing the framework in more complex environments with obstacles, multiple floors, or heterogeneous agent populations would validate its robustness.
 
-In conclusion, the hybrid adaptive crowd simulation framework successfully combines the efficiency of procedural coordination methods with the adaptability of data-driven correction techniques. The experimental results demonstrate that this combination delivers practical benefits: maintaining high computational performance while achieving significantly better evacuation outcomes. This approach is well-suited for applications requiring large-scale real-time crowds that can respond to local observations, events, or user interactions, particularly in evacuation planning, game development, and public safety simulation contexts.
+In conclusion, the hybrid adaptive crowd simulation framework combines efficient procedural coordination with localized data-driven correction. Across our experiments, it retains high throughput while improving evacuation outcomes, which makes it a practical option for evacuation planning, game crowds, and public-safety simulation scenarios that require both scale and local adaptation.
 
 # References
 
@@ -522,4 +536,5 @@ In conclusion, the hybrid adaptive crowd simulation framework successfully combi
 
 [4] D. Shiffman, *The Nature of Code*. The Nature of Code Foundation.
 
-[5] H. B. Yılmaz, "CMPE 49G: Fundamentals of Particle-based Simulations," course materials, Boğaziçi University, 2026.
+[5] H. B. Yilmaz, "CMPE 49G: Fundamentals of Particle-based Simulations," course materials, Bogazici University, 2026.
+

@@ -574,10 +574,10 @@ def create_result_figures(results_df):
     for model in summary_stats.index:
         row = [
             model,
-            f"{summary_stats.loc[model, ('runtime', 'mean')]:.2f} ± {summary_stats.loc[model, ('runtime', 'std')]:.2f}",
-            f"{summary_stats.loc[model, ('avg_evacuation_time', 'mean')]:.2f} ± {summary_stats.loc[model, ('avg_evacuation_time', 'std')]:.2f}",
-            f"{summary_stats.loc[model, ('max_density', 'mean')]:.1f} ± {summary_stats.loc[model, ('max_density', 'std')]:.1f}",
-            f"{summary_stats.loc[model, ('fps', 'mean')]:.1f} ± {summary_stats.loc[model, ('fps', 'std')]:.1f}"
+            f"{summary_stats.loc[model, ('runtime', 'mean')]:.2f} +/- {summary_stats.loc[model, ('runtime', 'std')]:.2f}",
+            f"{summary_stats.loc[model, ('avg_evacuation_time', 'mean')]:.2f} +/- {summary_stats.loc[model, ('avg_evacuation_time', 'std')]:.2f}",
+            f"{summary_stats.loc[model, ('max_density', 'mean')]:.1f} +/- {summary_stats.loc[model, ('max_density', 'std')]:.1f}",
+            f"{summary_stats.loc[model, ('fps', 'mean')]:.1f} +/- {summary_stats.loc[model, ('fps', 'std')]:.1f}"
         ]
         table_data.append(row)
 
@@ -599,12 +599,23 @@ def create_result_figures(results_df):
 
     # Figure 4: Tracked Agents Over Time (Hybrid only)
     print("  - Figure 4: Critical Agent Tracking (Hybrid Model)")
-    hybrid_detailed = [r for r in results_df.to_dict('records')
-                      if r['model'] == 'Hybrid Adaptive' and 'tracked_counts' in r
-                      and r['n_agents'] == 300 and r.get('run_id') != r.get('run_id')]
+    hybrid_candidates = results_df[
+        (results_df['model'] == 'Hybrid Adaptive') &
+        (results_df['n_agents'] == 300)
+    ]
+    if 'experiment' in results_df.columns:
+        hybrid_candidates = hybrid_candidates[
+            hybrid_candidates['experiment'].isin(['evacuation_test', 'scalability'])
+        ]
 
-    if hybrid_detailed:
-        tracked_counts = hybrid_detailed[0]['tracked_counts']
+    tracked_counts = None
+    for _, row in hybrid_candidates.iterrows():
+        candidate = row.get('tracked_counts')
+        if isinstance(candidate, (list, tuple, np.ndarray)) and len(candidate) > 0:
+            tracked_counts = list(candidate)
+            break
+
+    if tracked_counts is not None:
         fig, ax = plt.subplots(figsize=(10, 4.5))
         frames = range(len(tracked_counts))
         ax.plot(frames, tracked_counts, linewidth=2, color='#FF5722')
@@ -622,8 +633,17 @@ def create_result_figures(results_df):
     # Figure 5: Particle Filter RMSE
     print("  - Figure 5: Particle Filter State Estimation Error")
     pf_data = results_df[results_df['model'] == 'Particle Filter']
-    if not pf_data.empty and 'rmse_history' in pf_data.iloc[0]:
-        rmse_hist = pf_data.iloc[0]['rmse_history']
+    if 'experiment' in results_df.columns:
+        pf_data = pf_data[pf_data['experiment'] == 'particle_filter']
+
+    rmse_hist = None
+    for _, row in pf_data.iterrows():
+        candidate = row.get('rmse_history')
+        if isinstance(candidate, (list, tuple, np.ndarray)) and len(candidate) > 0:
+            rmse_hist = np.asarray(candidate, dtype=float)
+            break
+
+    if rmse_hist is not None:
         fig, ax = plt.subplots(figsize=(10, 4.5))
         ax.plot(rmse_hist, linewidth=2, color='#2196F3')
         ax.set_xlabel('Simulation Frame')
@@ -637,24 +657,24 @@ def create_result_figures(results_df):
         plt.savefig(OUT_DIR / 'fig5_pf_rmse.png', dpi=150)
         plt.close()
 
-    print("  ✓ All figures generated successfully!")
+    print("  [OK] All figures generated successfully!")
 
 
 def save_results_csv(results):
     """Save results to CSV file."""
-    # Remove non-serializable fields for CSV
-    csv_results = []
-    for r in results:
-        csv_row = {k: v for k, v in r.items()
-                   if k not in ['positions_history', 'evacuated', 'evacuation_times',
-                               'rmse_history', 'tracked_counts']}
-        csv_results.append(csv_row)
+    # Keep full in-memory DataFrame for figure generation.
+    full_df = pd.DataFrame(results)
 
-    df = pd.DataFrame(csv_results)
+    # Remove non-serializable fields only for CSV export.
+    csv_df = full_df.drop(columns=[
+        'positions_history', 'evacuated', 'evacuation_times',
+        'rmse_history', 'tracked_counts'
+    ], errors='ignore')
+
     csv_path = RESULTS_DIR / 'metrics.csv'
-    df.to_csv(csv_path, index=False)
-    print(f"\n✓ Results saved to: {csv_path}")
-    return df
+    csv_df.to_csv(csv_path, index=False)
+    print(f"\n[OK] Results saved to: {csv_path}")
+    return full_df
 
 
 # ============================================================
@@ -682,10 +702,10 @@ if __name__ == "__main__":
     print(f"\nOutputs:")
     print(f"  - Metrics CSV: {RESULTS_DIR / 'metrics.csv'}")
     print(f"  - Figures: {OUT_DIR}/")
-    print(f"    • fig1_scalability.png")
-    print(f"    • fig2_evacuation_times.png")
-    print(f"    • fig3_summary_table.png")
-    print(f"    • fig4_tracked_agents.png")
-    print(f"    • fig5_pf_rmse.png")
+    print(f"    - fig1_scalability.png")
+    print(f"    - fig2_evacuation_times.png")
+    print(f"    - fig3_summary_table.png")
+    print(f"    - fig4_tracked_agents.png")
+    print(f"    - fig5_pf_rmse.png")
     print("\nNext step: Use these results in your Phase-2 paper!")
     print("=" * 60 + "\n")
